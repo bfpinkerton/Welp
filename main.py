@@ -18,7 +18,7 @@ def get_weighted_vectors(filename):
 
     return weighted_vectors
 
-def get_weights(ingredients, dropoff_value=1.2):
+def get_weights(ingredients, dropoff_value=3.0):
     """ Returns a list containing the weight of the ingredients in order.
     """
     weights = []
@@ -91,9 +91,33 @@ def get_centroids(weighted_vectors, number_of_centroids):
 
     return sorted(centroids)
 
+def get_centroid_for_document(document_vector, centroids_vectors):
+    distances = {}
+
+    for centroid_food in centroids_vectors:
+        distance = get_distance(document_vector, centroids_vectors[centroid_food])
+        distances[distance] = centroid_food
+
+    centroid = distances[min(distances.keys())]
+
+    return centroid
+
 def main():
+    cluster_size = 10
+
     weighted_vectors = get_weighted_vectors(sys.argv[1])
-    print get_centroids(weighted_vectors, len(weighted_vectors) / 10)
+
+    centroids = get_centroids(weighted_vectors, len(weighted_vectors) / cluster_size)
+    centroids_vectors = {centroid: weighted_vectors[centroid] for centroid in centroids}
+    centroids_to_clusters = {centroid: [] for centroid in centroids}
+
+    for food in weighted_vectors:
+        centroid = get_centroid_for_document(weighted_vectors[food], centroids_vectors)
+        centroids_to_clusters[centroid].append(food)
+
+    clusters = [centroids_to_clusters[centroid] for centroid in centroids_to_clusters]
+
+    print json.dumps(clusters, indent=4)
 
 if __name__ == '__main__':
     main()
