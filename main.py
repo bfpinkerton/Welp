@@ -18,7 +18,7 @@ def get_weighted_vectors(filename):
 
     return weighted_vectors
 
-def get_weights(ingredients, dropoff_value=3.0):
+def get_weights(ingredients, dropoff_value=4.0):
     """ Returns a list containing the weight of the ingredients in order.
     """
     weights = []
@@ -57,19 +57,26 @@ def read_file(filename):
 def get_json(string):
     return json.loads(string)
 
-def get_distance(vector1, vector2):
+def get_distance(vector1_name, vector1, vector2_name, vector2):
     distance = 0
 
     for term in vector1.keys() + vector2.keys(): 
         distance += (vector1.get(term, 0) - vector2.get(term, 0)) ** 2
 
+    food1_name = [normalize_term(term) for term in vector1_name.split()]
+    food2_name = [normalize_term(term) for term in vector2_name.split()]
+
+    for term in food1_name:
+        if term in food2_name:
+            distance ** 0.5
+
     return distance
 
-def get_average_distance_from_centroids(vector, centroids_vectors):
+def get_average_distance_from_centroids(vector_name, vector, centroids_vectors):
     total = 0.0
 
-    for centroid in centroids_vectors:
-        total += get_distance(vector, centroid)
+    for centroid_name in centroids_vectors:
+        total += get_distance(vector_name, vector, centroid_name, centroids_vectors[centroid_name])
 
     return total / len(centroids_vectors)
 
@@ -81,8 +88,8 @@ def get_centroids(weighted_vectors, number_of_centroids):
 
         for food in list(set(weighted_vectors.keys()) - set(centroids)):
             vector = weighted_vectors[food]
-            centroids_vectors = [weighted_vectors[centroid_food] for centroid_food in centroids]
-            average_distance_from_centroids = get_average_distance_from_centroids(vector, centroids_vectors)
+            centroids_vectors = {centroid_food: weighted_vectors[centroid_food] for centroid_food in centroids}
+            average_distance_from_centroids = get_average_distance_from_centroids(food, vector, centroids_vectors)
             potential_centroids[average_distance_from_centroids] = food
 
         max_value = max(potential_centroids.keys())
@@ -91,11 +98,11 @@ def get_centroids(weighted_vectors, number_of_centroids):
 
     return sorted(centroids)
 
-def get_centroid_for_document(document_vector, centroids_vectors):
+def get_centroid_for_document(vector_name, vector, centroids_vectors):
     distances = {}
 
     for centroid_food in centroids_vectors:
-        distance = get_distance(document_vector, centroids_vectors[centroid_food])
+        distance = get_distance(vector_name, vector, centroid_food, centroids_vectors[centroid_food])
         distances[distance] = centroid_food
 
     centroid = distances[min(distances.keys())]
@@ -112,12 +119,10 @@ def main():
     centroids_to_clusters = {centroid: [] for centroid in centroids}
 
     for food in weighted_vectors:
-        centroid = get_centroid_for_document(weighted_vectors[food], centroids_vectors)
+        centroid = get_centroid_for_document(food, weighted_vectors[food], centroids_vectors)
         centroids_to_clusters[centroid].append(food)
 
     clusters = [centroids_to_clusters[centroid] for centroid in centroids_to_clusters]
-
-    print json.dumps(clusters, indent=4)
 
 if __name__ == '__main__':
     main()
