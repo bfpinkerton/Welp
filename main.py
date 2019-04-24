@@ -1,7 +1,9 @@
 import json
+import random
+import sys
 
-def get_weighted_vectors():
-    unweighted_vectors = get_unweighted_vectors()
+def get_weighted_vectors(filename):
+    unweighted_vectors = get_unweighted_vectors(filename)
     weighted_vectors = {}
 
     for food in unweighted_vectors:
@@ -34,8 +36,8 @@ def get_weights(ingredients, dropoff_value=1.2):
 def normalize_term(term):
     return term.lower().strip()
 
-def get_unweighted_vectors():
-    s = read_file('food.json')
+def get_unweighted_vectors(filename):
+    s = read_file(filename)
     j = get_json(s)
 
     # we want to preserve the order so we use a list
@@ -55,8 +57,43 @@ def read_file(filename):
 def get_json(string):
     return json.loads(string)
 
+def get_distance(vector1, vector2):
+    distance = 0
+
+    for term in vector1.keys() + vector2.keys(): 
+        distance += (vector1.get(term, 0) - vector2.get(term, 0)) ** 2
+
+    return distance
+
+def get_average_distance_from_centroids(vector, centroids_vectors):
+    total = 0.0
+
+    for centroid in centroids_vectors:
+        total += get_distance(vector, centroid)
+
+    return total / len(centroids_vectors)
+
+def get_centroids(weighted_vectors, number_of_centroids):
+    centroids = [weighted_vectors.keys()[0]]
+
+    while len(centroids) != number_of_centroids:
+        potential_centroids = {}
+
+        for food in list(set(weighted_vectors.keys()) - set(centroids)):
+            vector = weighted_vectors[food]
+            centroids_vectors = [weighted_vectors[centroid_food] for centroid_food in centroids]
+            average_distance_from_centroids = get_average_distance_from_centroids(vector, centroids_vectors)
+            potential_centroids[average_distance_from_centroids] = food
+
+        max_value = max(potential_centroids.keys())
+        
+        centroids.append(potential_centroids[max_value])
+
+    return sorted(centroids)
+
 def main():
-    print get_weighted_vectors()
+    weighted_vectors = get_weighted_vectors(sys.argv[1])
+    print get_centroids(weighted_vectors, len(weighted_vectors) / 10)
 
 if __name__ == '__main__':
     main()
