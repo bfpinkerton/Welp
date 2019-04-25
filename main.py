@@ -1,9 +1,27 @@
 import json
-import random
+import math
 import sys
+
+def remove_unique_ingredients(vector, unique_ingredients):
+    return [ingredient for ingredient in vector if ingredient not in unique_ingredients]
 
 def get_weighted_vectors(filename):
     unweighted_vectors = get_unweighted_vectors(filename)
+
+    ingredients = [ingredient for ingredient in unweighted_vectors.values()]
+    ingredients = [ingredient[0] for recipe_ingredients in ingredients for ingredient in recipe_ingredients]
+    
+    unique_ingredients = {}
+    for ingredient in ingredients:
+        if ingredient in unique_ingredients:
+            unique_ingredients[ingredient] += 1
+        else:
+            unique_ingredients[ingredient] = 1
+
+    unique_ingredients = set(ingredient for ingredient in unique_ingredients if unique_ingredients[ingredient] == 1)
+
+    unweighted_vectors = {food: remove_unique_ingredients(unweighted_vectors[food], unique_ingredients) for food in unweighted_vectors}
+
     weighted_vectors = {}
 
     for food in unweighted_vectors:
@@ -18,18 +36,13 @@ def get_weighted_vectors(filename):
 
     return weighted_vectors
 
-def get_weights(ingredients, dropoff_value=4.0):
+def get_weights(ingredients):
     """ Returns a list containing the weight of the ingredients in order.
     """
     weights = []
-    total = 100
 
-    for _ in ingredients:
-        weights.append(total)
-        total /= float(dropoff_value)
-
-    s = sum(weights)
-    weights = [w / s for w in weights]
+    for i, _ in enumerate(ingredients):
+        weights.append(1 / math.log((i + 1.1)))
 
     return weights
 
@@ -61,14 +74,18 @@ def get_distance(vector1_name, vector1, vector2_name, vector2):
     distance = 0
 
     for term in vector1.keys() + vector2.keys(): 
-        distance += (vector1.get(term, 0) - vector2.get(term, 0)) ** 2
+        d = (vector1.get(term, 0) - vector2.get(term, 0)) ** 2
+        distance += d ** 0.7
+
+    if all(term not in vector2.keys() for term in vector1.keys()):
+        distance *= 10000000
 
     food1_name = [normalize_term(term) for term in vector1_name.split()]
     food2_name = [normalize_term(term) for term in vector2_name.split()]
 
     for term in food1_name:
         if term in food2_name:
-            distance ** 0.5
+            distance ** 0.1
 
     return distance
 
@@ -129,7 +146,7 @@ def get_clusters_with_ingredients(centroids_to_clusters, filename):
     return clusters_with_ingredients
 
 def main():
-    cluster_size = 10
+    cluster_size = 6
 
     weighted_vectors = get_weighted_vectors(sys.argv[1])
 
@@ -141,7 +158,11 @@ def main():
         centroid = get_centroid_for_document(food, weighted_vectors[food], centroids_vectors)
         centroids_to_clusters[centroid].append(food)
 
-    clusters = [centroids_to_clusters[centroid] for centroid in centroids_to_clusters]
+    # clusters = [centroids_to_clusters[centroid] for centroid in centroids_to_clusters]
+
+    clusters_with_ingredients = get_clusters_with_ingredients(centroids_to_clusters, sys.argv[1])
+
+    print json.dumps(clusters_with_ingredients, indent=4)
 
 if __name__ == '__main__':
     main()
