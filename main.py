@@ -109,6 +109,25 @@ def get_centroid_for_document(vector_name, vector, centroids_vectors):
 
     return centroid
 
+def get_clusters_with_ingredients(centroids_to_clusters, filename):
+    s = read_file(filename)
+    j = get_json(s)
+
+    for food in j:
+        j[food] = [normalize_term(ingredient) for ingredient in j[food].split(',')]
+
+    j = {normalize_term(food): j[food] for food in j}
+
+    clusters_with_ingredients = []
+
+    for centroid in centroids_to_clusters:
+        c = []
+        for item in centroids_to_clusters[centroid]:
+            c.append('{:<50}: {}'.format(item, ', '.join(j[item])))
+        clusters_with_ingredients.append({centroid: c})
+
+    return clusters_with_ingredients
+
 def main():
     cluster_size = 10
 
